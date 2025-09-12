@@ -1,0 +1,43 @@
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debug
+*.log
+*.pid
+*.seed
+
+# Environment
+.env
+.env.local
+
+# Build outputs
+dist/
+build/
+out/
+
+# Testing
+coverage/
+*.lcov
+.nyc_output
+
+# Documentation
+docs/_build/
+
+# Temporary files
+tmp/
+temp/
+*.tmp

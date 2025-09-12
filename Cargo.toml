@@ -1,0 +1,41 @@
+[workspace]
+members = [
+    "mineos-core",
+    "mineos-stratum",
+    "mineos-hardware",
+    "mineos-hash",
+    "mineos-monitor-basic",
+    "mineos-cli",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+authors = ["MineOS Development Team"]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/mineosdev/mineos"
+homepage = "https://github.com/mineosdev/mineos"
+rust-version = "1.70"
+
+[workspace.dependencies]
+# Common dependencies for all crates
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.35", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+anyhow = "1.0"
+thiserror = "1.0"
+async-trait = "0.1"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[profile.dev]
+opt-level = 0
+
+[profile.test]
+opt-level = 0
