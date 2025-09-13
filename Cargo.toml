@@ -1,5 +1,5 @@
 [workspace]
-members = [ "mineos-hardware",
+members = [ "mineos-hardware", "mineos-hash",
     # "mineos-core",
     "mineos-stratum",
     # "mineos-hardware",

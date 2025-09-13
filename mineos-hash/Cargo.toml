@@ -1,0 +1,81 @@
+[package]
+name = "mineos-hash"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+description = "Mining algorithm implementations for MineOS"
+
+[dependencies]
+# Core dependencies
+mineos-hardware = { path = "../mineos-hardware" }
+cudarc = { version = "0.17", features = ["driver", "nvrtc"] }
+
+# Hashing and crypto
+sha3 = "0.10"
+keccak = "0.1"
+hex = "0.4"
+byteorder = "1.5"
+
+# Memory management
+memmap2 = "0.9"
+
+# Error handling
+thiserror.workspace = true
+anyhow.workspace = true
+
+# Logging
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Utilities
+once_cell = "1.20"
+lazy_static = "1.5"
+rayon = "1.10"
+
+# Async support
+tokio.workspace = true
+
+# Math utilities
+num-traits = "0.2"
+num-bigint = "0.4"
+
+[dev-dependencies]
+criterion = "0.5"
+hex-literal = "0.4"
+
+[features]
+default = ["cuda"]
+cuda = ["mineos-hardware/cuda"]
+opencl = [] # Future: OpenCL support
+
+[[bin]]
+name = "test_kawpow"
+path = "src/bin/test_kawpow.rs"
+
+[[bin]]
+name = "test_simple"
+path = "src/bin/test_simple.rs"
+
+[[bin]]
+name = "test_fast"
+path = "src/bin/test_fast.rs"
+
+[[bin]]
+name = "mine_testnet"
+path = "src/bin/mine_testnet.rs"
+
+[[bin]]
+name = "test_optimized"
+path = "src/bin/test_optimized.rs"
+
+# [[bench]]
+# name = "kawpow_bench"
+# harness = false

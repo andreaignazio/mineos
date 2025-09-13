@@ -1,10 +1,69 @@
-use cudarc::driver::{CudaContext, CudaStream, CudaModule, CudaFunction, LaunchConfig};
+use cudarc::driver::{CudaContext, CudaStream, CudaModule, CudaFunction, LaunchConfig, DeviceRepr, PushKernelArg};
 use cudarc::nvrtc::{compile_ptx, compile_ptx_with_opts, Ptx, CompileOptions};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tracing::{debug, info};
 
 use super::error::{GpuError, Result};
+
+/// Compiled CUDA kernel ready for execution
+pub struct CompiledKernel {
+    pub function: CudaFunction,
+    pub stream: Arc<CudaStream>,
+}
+
+impl CompiledKernel {
+    /// Compile a CUDA kernel from source
+    pub fn compile(
+        context: &Arc<CudaContext>,
+        stream: &Arc<CudaStream>,
+        source: &str,
+        kernel_name: &str,
+        options: &[&str],
+    ) -> Result<Self> {
+        // Create compile options
+        let arch = options.iter()
+            .find(|o| o.starts_with("-arch="))
+            .and_then(|o| o.strip_prefix("-arch="))
+            .unwrap_or("sm_75");
+        
+        let arch_str = Box::leak(arch.to_string().into_boxed_str());
+        let opts = CompileOptions {
+            arch: Some(arch_str),
+            ..Default::default()
+        };
+        
+        // Compile to PTX
+        let ptx = compile_ptx_with_opts(source, opts)
+            .map_err(|e| GpuError::KernelCompilationFailed(format!("{}: {}", kernel_name, e)))?;
+        
+        // Load module
+        let module = context.load_module(ptx)?;
+        
+        // Get function
+        let function = module.load_function(kernel_name)?;
+        
+        // Use provided stream
+        let stream = Arc::clone(stream);
+        
+        Ok(Self {
+            function,
+            stream,
+        })
+    }
+    
+    /// Launch the kernel with a launch configuration
+    /// Note: Arguments must be added through the returned LaunchBuilder
+    pub fn launch_builder(&self) -> LaunchBuilder {
+        LaunchBuilder::new(&self.stream, &self.function)
+    }
+    
+    /// Synchronize the stream
+    pub fn synchronize(&self) -> Result<()> {
+        self.stream.synchronize()?;
+        Ok(())
+    }
+}
 
 /// Manages CUDA kernel compilation and execution
 pub struct KernelManager {
@@ -141,7 +200,6 @@ impl KernelManager {
 pub struct LaunchBuilder<'a> {
     stream: &'a CudaStream,
     function: &'a CudaFunction,
-    args: Vec<*mut std::ffi::c_void>,
     config: LaunchConfig,
 }
 
@@ -151,7 +209,6 @@ impl<'a> LaunchBuilder<'a> {
         Self {
             stream,
             function,
-            args: Vec::new(),
             config: LaunchConfig {
                 grid_dim: (1, 1, 1),
                 block_dim: (256, 1, 1),
@@ -160,12 +217,6 @@ impl<'a> LaunchBuilder<'a> {
         }
     }
     
-    /// Add an argument to the kernel
-    pub fn arg<T>(mut self, arg: &T) -> Self {
-        let ptr = arg as *const T as *mut std::ffi::c_void;
-        self.args.push(ptr);
-        self
-    }
     
     /// Set the launch configuration
     pub fn config(mut self, config: LaunchConfig) -> Self {
@@ -194,18 +245,30 @@ impl<'a> LaunchBuilder<'a> {
         self
     }
     
-    /// Launch the kernel
-    pub unsafe fn launch(self) -> Result<()> {
+    /// Launch the kernel with provided arguments
+    /// Arguments must be references to DeviceRepr types or device pointers
+    pub fn launch<T>(self, args: &[T]) -> Result<()>
+    where
+        T: DeviceRepr,
+    {
         // Use the stream's launch_builder
         let mut builder = self.stream.launch_builder(self.function);
         
-        // Add arguments - need to pass actual references
-        // This is a limitation - we need to pass actual references
-        // For now just launch without args
+        // Add all arguments to the builder
+        for arg in args {
+            builder.arg(arg);
+        }
         
         // Launch with config
-        builder.launch(self.config)?;
+        unsafe { builder.launch(self.config)?; }
         
+        Ok(())
+    }
+    
+    /// Launch the kernel without arguments (for testing)
+    pub fn launch_no_args(self) -> Result<()> {
+        let mut builder = self.stream.launch_builder(self.function);
+        unsafe { builder.launch(self.config)?; }
         Ok(())
     }
 }

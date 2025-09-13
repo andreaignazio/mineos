@@ -1,4 +1,4 @@
-use cudarc::driver::{CudaContext, CudaStream, CudaSlice, sys};
+use cudarc::driver::{CudaContext, CudaStream, CudaSlice, sys, DevicePtr};
 use std::sync::Arc;
 use tracing::{debug, info};
 
@@ -26,10 +26,10 @@ pub struct GpuDevice {
     pub clock_rate_mhz: u32,
     
     /// CUDA context for this device
-    context: Arc<CudaContext>,
+    pub context: Arc<CudaContext>,
     
     /// Default stream for this device
-    stream: Arc<CudaStream>,
+    pub stream: Arc<CudaStream>,
 }
 
 impl GpuDevice {
@@ -136,6 +136,76 @@ impl GpuDevice {
         self.stream.synchronize()?;
         Ok(())
     }
+    
+    /// Get memory info (free, total) in bytes
+    pub fn get_memory_info(&self) -> (usize, usize) {
+        // Use cudarc driver API to get memory info
+        cudarc::driver::result::mem_get_info()
+            .unwrap_or((0, 0))
+    }
+    
+    /// Get GPU utilization percentage
+    /// Note: cudarc doesn't provide GPU utilization directly
+    /// This would require NVML or parsing nvidia-smi output
+    pub fn get_utilization(&self) -> f32 {
+        // Try to get utilization from nvidia-smi
+        if let Ok(output) = std::process::Command::new("nvidia-smi")
+            .args(&[
+                "--query-gpu=utilization.gpu",
+                "--format=csv,noheader,nounits",
+                &format!("-i={}", self.index)
+            ])
+            .output()
+        {
+            if let Ok(utilization_str) = String::from_utf8(output.stdout) {
+                if let Ok(utilization) = utilization_str.trim().parse::<f32>() {
+                    return utilization;
+                }
+            }
+        }
+        // Return 0 if we can't get actual utilization
+        0.0
+    }
+    
+    /// Get GPU temperature in Celsius
+    pub fn get_temperature(&self) -> Option<f32> {
+        // Try to get temperature from nvidia-smi
+        if let Ok(output) = std::process::Command::new("nvidia-smi")
+            .args(&[
+                "--query-gpu=temperature.gpu",
+                "--format=csv,noheader,nounits",
+                &format!("-i={}", self.index)
+            ])
+            .output()
+        {
+            if let Ok(temp_str) = String::from_utf8(output.stdout) {
+                if let Ok(temp) = temp_str.trim().parse::<f32>() {
+                    return Some(temp);
+                }
+            }
+        }
+        None
+    }
+    
+    /// Get power usage in Watts
+    pub fn get_power_usage(&self) -> Option<f32> {
+        // Try to get power usage from nvidia-smi
+        if let Ok(output) = std::process::Command::new("nvidia-smi")
+            .args(&[
+                "--query-gpu=power.draw",
+                "--format=csv,noheader,nounits",
+                &format!("-i={}", self.index)
+            ])
+            .output()
+        {
+            if let Ok(power_str) = String::from_utf8(output.stdout) {
+                if let Ok(power) = power_str.trim().parse::<f32>() {
+                    return Some(power);
+                }
+            }
+        }
+        None
+    }
 }
 
 /// Get total memory for a device
@@ -192,9 +262,25 @@ impl<T> DeviceBuffer<T> {
     pub fn slice_mut(&mut self) -> &mut CudaSlice<T> {
         &mut self.slice
     }
+    
+    /// Get size in bytes
+    pub fn size(&self) -> usize {
+        self.slice.len() * std::mem::size_of::<T>()
+    }
+    
+    /// Get as kernel parameter (returns the device pointer)
+    /// Note: The returned pointer is only valid for the lifetime of the buffer
+    pub fn as_kernel_param(&self) -> cudarc::driver::sys::CUdeviceptr
+    where
+        T: cudarc::driver::DeviceRepr,
+    {
+        // Get the device pointer for kernel launches
+        let (ptr, _sync) = self.slice.device_ptr(&self.stream);
+        ptr
+    }
 }
 
-impl<T: Clone> DeviceBuffer<T> {
+impl<T: Clone + Copy> DeviceBuffer<T> {
     /// Copy data from host to device
     pub fn copy_from_host(&mut self, data: &[T]) -> Result<()> 
     where
@@ -213,7 +299,24 @@ impl<T: Clone> DeviceBuffer<T> {
     }
     
     /// Copy data from device to host
-    pub fn copy_to_host(&self) -> Result<Vec<T>> 
+    pub fn copy_to_host(&self, data: &mut [T]) -> Result<()> 
+    where
+        T: cudarc::driver::DeviceRepr + Clone,
+    {
+        if data.len() != self.len() {
+            return Err(GpuError::MemoryTransferFailed(
+                format!("Size mismatch: buffer has {} elements, data has {} elements", 
+                        self.len(), data.len())
+            ));
+        }
+        
+        let result = self.stream.memcpy_dtov(&self.slice)?;
+        data.copy_from_slice(&result);
+        Ok(())
+    }
+    
+    /// Copy data from device to a new vector
+    pub fn copy_to_vec(&self) -> Result<Vec<T>> 
     where
         T: cudarc::driver::DeviceRepr + Clone,
     {
