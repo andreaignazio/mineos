@@ -1,11 +1,11 @@
 [workspace]
-members = [
-    "mineos-core",
+members = [ "mineos-hardware",
+    # "mineos-core",
     "mineos-stratum",
-    "mineos-hardware",
-    "mineos-hash",
-    "mineos-monitor-basic",
-    "mineos-cli",
+    # "mineos-hardware",
+    # "mineos-hash",
+    # "mineos-monitor-basic",
+    # "mineos-cli",
 ]
 resolver = "2"
 

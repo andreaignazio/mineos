@@ -1,0 +1,76 @@
+[package]
+name = "mineos-stratum"
+version = "0.1.0"
+edition = "2021"
+authors = ["MineOS Team"]
+description = "Stratum V1/V2 protocol client for cryptocurrency mining"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/mineos/mineos"
+keywords = ["mining", "stratum", "cryptocurrency", "bitcoin"]
+categories = ["network-programming", "cryptography::cryptocurrencies"]
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.40", features = ["full"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Networking
+backoff = { version = "0.4", features = ["tokio"] }
+arc-swap = "1.7"
+
+# Utilities
+bytes = "1.7"
+futures = "0.3"
+async-trait = "0.1"
+hex = "0.4"
+uuid = { version = "1.10", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Crypto
+sha2 = "0.10"
+
+# Random
+rand = "0.8"
+
+[dev-dependencies]
+tokio-test = "0.4"
+mockito = "1.5"
+criterion = "0.5"
+pretty_assertions = "1.4"
+
+# [[bench]]
+# name = "stratum_bench"
+# harness = false
+
+[features]
+default = []
+# Enable Stratum V2 support (future)
+stratum-v2 = []
+# Enable WebSocket transport
+websocket = ["tokio-tungstenite"]
+# Enable TLS support
+tls = ["tokio-rustls", "rustls-pemfile"]
+
+[dependencies.tokio-tungstenite]
+version = "0.24"
+optional = true
+
+[dependencies.tokio-rustls]
+version = "0.26"
+optional = true
+
+[dependencies.rustls-pemfile]
+version = "2.1"
+optional = true

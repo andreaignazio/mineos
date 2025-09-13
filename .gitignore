@@ -41,3 +41,5 @@ docs/_build/
 tmp/
 temp/
 *.tmp
+
+MVP_TASKS.json
