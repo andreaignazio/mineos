@@ -4,8 +4,8 @@ members = [
     "mineos-hardware",
     "mineos-hash",
     "mineos-stratum",
+    "mineos-cli",
     # "mineos-monitor-basic",
-    # "mineos-cli",
 ]
 resolver = "2"
 
