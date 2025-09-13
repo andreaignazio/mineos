@@ -1,9 +1,9 @@
 [workspace]
-members = [ "mineos-hardware", "mineos-hash",
-    # "mineos-core",
+members = [
+    "mineos-core",
+    "mineos-hardware",
+    "mineos-hash",
     "mineos-stratum",
-    # "mineos-hardware",
-    # "mineos-hash",
     # "mineos-monitor-basic",
     # "mineos-cli",
 ]

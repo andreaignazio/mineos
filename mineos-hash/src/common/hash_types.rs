@@ -109,6 +109,19 @@ pub struct BlockHeader {
     pub height: u64,
 }
 
+impl Default for BlockHeader {
+    fn default() -> Self {
+        Self {
+            prev_hash: Hash256::default(),
+            merkle_root: Hash256::default(),
+            timestamp: 0,
+            bits: 0x1d00ffff,
+            nonce: 0,
+            height: 0,
+        }
+    }
+}
+
 impl BlockHeader {
     /// Serialize header to bytes (80 bytes standard + 8 bytes height for KawPow)
     pub fn to_bytes(&self) -> Vec<u8> {

@@ -1,0 +1,48 @@
+[package]
+name = "mineos-core"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+# Workspace dependencies
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+async-trait.workspace = true
+
+# Internal dependencies
+mineos-stratum = { path = "../mineos-stratum" }
+mineos-hardware = { path = "../mineos-hardware" }
+mineos-hash = { path = "../mineos-hash" }
+
+# Additional dependencies for core functionality
+crossbeam-channel = "0.5"
+parking_lot = "0.12"
+dashmap = "5.5"
+futures = "0.3"
+atomic = "0.6"
+num-traits = "0.2"
+hex = "0.4"
+
+# Benchmark dependencies
+chrono = { version = "0.4", features = ["serde"] }
+csv = "1.3"
+uuid = { version = "1.6", features = ["v4", "serde"] }
+reqwest = { version = "0.11", features = ["json"] }
+
+[dev-dependencies]
+criterion = "0.5"
+mockall = "0.12"
+proptest = "1.4"
+
+# [[bench]]
+# name = "work_distribution"
+# harness = false
