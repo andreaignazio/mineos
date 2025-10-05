@@ -1,0 +1,8 @@
+import Cocoa
+import Darwin
+
+let test : String = "Hello World!"
+
+print(test)
+
+print("\nRandom Fact: 45° cos is \(cos(45)")
